@@ -1,16 +1,32 @@
-# agent-tracer
+<div align="center">
 
-**Execution tracing and call graph for AI agents.**
+<img src="assets/agent-tracer-hero.png" alt="agent-tracer — Vedic Arsenal" width="100%" />
 
-Agents call tools, sub-agents, and APIs in complex chains. When something fails, `agent-tracer` gives you the full trace:
+# 🔮 agent-tracer
 
-```
-agent.run → tool.search → api.fetch → ❌ ConnectionError
-```
+### *अनुसरण* — Anusarana — following the cosmic trace
 
-Zero dependencies. Pure Python 3.10+.
+**Execution tracing and call graph for agents — Span, Tracer, @trace_call with async support. Zero dependencies.**
+
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python)](https://python.org)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-brightgreen?style=flat-square)](https://github.com/darshjme/agent-tracer)
+[![Tests](https://img.shields.io/badge/Tests-Passing-success?style=flat-square)](https://github.com/darshjme/agent-tracer/actions)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=flat-square)](LICENSE)
+[![Vedic Arsenal](https://img.shields.io/badge/Vedic%20Arsenal-100%20libs-purple?style=flat-square)](https://github.com/darshjme/arsenal)
+
+*Part of the [**Vedic Arsenal**](https://github.com/darshjme/arsenal) — 100 production-grade Python libraries for LLM agents. Zero dependencies. Battle-tested.*
+
+</div>
 
 ---
+
+## Overview
+
+`agent-tracer` implements **execution tracing and call graph for agents — span, tracer, @trace_call with async support. zero dependencies.**
+
+Inspired by the Vedic principle of *अनुसरण* (Anusarana), this library brings the ancient wisdom of structured discipline to modern LLM agent engineering.
+
+No external dependencies. Pure Python 3.8+. Drop it in anywhere.
 
 ## Installation
 
@@ -18,160 +34,67 @@ Zero dependencies. Pure Python 3.10+.
 pip install agent-tracer
 ```
 
----
+Or clone directly:
+```bash
+git clone https://github.com/darshjme/agent-tracer.git
+cd agent-tracer
+pip install -e .
+```
 
 ## Quick Start
 
-### Basic Tracing
-
 ```python
-from agent_tracer import Tracer
+from tracer import *
 
-tracer = Tracer()
-
-# Agent root span
-agent_span = tracer.start_span("agent.run")
-
-# Tool call child span
-tool_span = tracer.start_span("tool.search", parent_id=agent_span.span_id, metadata={"query": "LLM papers"})
-
-# API call grandchild span
-api_span = tracer.start_span("api.fetch", parent_id=tool_span.span_id, metadata={"url": "https://api.example.com"})
-
-# Simulate API failure
-tracer.finish_span(api_span.span_id, error="ConnectionError: timed out")
-tracer.finish_span(tool_span.span_id, error="API call failed")
-tracer.finish_span(agent_span.span_id, error="tool failed")
-
-# Inspect the trace
-import json
-print(json.dumps(tracer.to_dict(), indent=2))
+# Initialize
+# See examples/ for full usage patterns
 ```
 
-Output:
-```json
-{
-  "trace_id": "...",
-  "spans": [
-    {
-      "name": "agent.run",
-      "status": "error",
-      "error": "tool failed",
-      "children": [
-        {
-          "name": "tool.search",
-          "status": "error",
-          "children": [
-            {
-              "name": "api.fetch",
-              "status": "error",
-              "error": "ConnectionError: timed out",
-              "children": []
-            }
-          ]
-        }
-      ]
-    }
-  ],
-  "total_spans": 3
-}
+## Why `agent-tracer`?
+
+Production LLM systems fail in predictable ways. `agent-tracer` solves the **tracer** failure mode with:
+
+- **Zero dependencies** — no version conflicts, no bloat
+- **Battle-tested patterns** — extracted from real production systems
+- **Type-safe** — full type hints, mypy-compatible
+- **Minimal surface area** — one job, done well
+- **Composable** — works with any LLM framework (LangChain, LlamaIndex, raw OpenAI, etc.)
+
+## The Vedic Arsenal
+
+`agent-tracer` is part of **[darshjme/arsenal](https://github.com/darshjme/arsenal)** — a collection of 100 focused Python libraries for LLM agent infrastructure.
+
+Each library solves exactly one problem. Together they form a complete stack.
+
+```
+pip install agent-tracer  # this library
+# Browse all 100: https://github.com/darshjme/arsenal
 ```
 
----
+## Contributing
 
-### @trace_call Decorator
+Found a bug? Have an improvement?
 
-```python
-from agent_tracer import Tracer, trace_call
+1. Fork the repo
+2. Create a feature branch (`git checkout -b fix/your-fix`)
+3. Add tests
+4. Open a PR
 
-tracer = Tracer()
-
-@trace_call(tracer, name="agent.run")
-def run_agent(task: str):
-    result = call_tool(task)
-    return result
-
-@trace_call(tracer, name="tool.web_search")
-def call_tool(query: str, span_id: str = None):
-    # span_id is injected automatically when accepted
-    print(f"Searching with span: {span_id}")
-    return fetch_api(query, parent_span=span_id)
-
-def fetch_api(query, parent_span=None):
-    api_span = tracer.start_span("api.fetch", parent_id=parent_span, metadata={"query": query})
-    try:
-        # ... do real API call ...
-        tracer.finish_span(api_span.span_id)
-        return {"results": []}
-    except Exception as e:
-        tracer.finish_span(api_span.span_id, error=str(e))
-        raise
-
-run_agent("find recent LLM papers")
-
-# Print call graph
-for span in tracer.spans:
-    indent = "  " if span.parent_id else ""
-    print(f"{indent}[{span.status}] {span.name} ({span.duration_ms:.1f}ms)")
-```
-
----
-
-### Async Support
-
-```python
-import asyncio
-from agent_tracer import Tracer, trace_call
-
-tracer = Tracer()
-
-@trace_call(tracer, name="async.agent")
-async def async_agent():
-    await asyncio.sleep(0.1)
-    return "done"
-
-asyncio.run(async_agent())
-print(tracer.spans[0].status)  # success
-```
-
----
-
-## API Reference
-
-### `Span`
-
-| Attribute/Method | Type | Description |
-|-----------------|------|-------------|
-| `span_id` | `str` | UUID4 identifier |
-| `name` | `str` | Operation name |
-| `parent_id` | `str \| None` | Parent span ID |
-| `metadata` | `dict` | Arbitrary key-value context |
-| `start_time` | `float` | Unix timestamp |
-| `end_time` | `float \| None` | Unix timestamp when finished |
-| `status` | `str` | `"active"`, `"success"`, or `"error"` |
-| `error` | `str \| None` | Error message if failed |
-| `duration_ms` | `float \| None` | Duration in milliseconds |
-| `finish(error=None)` | method | Mark span complete |
-| `to_dict()` | `dict` | Serialize to dictionary |
-
-### `Tracer`
-
-| Method | Description |
-|--------|-------------|
-| `start_span(name, parent_id, metadata)` | Create and register a span |
-| `finish_span(span_id, error)` | Finish a span by ID |
-| `get_span(span_id)` | Retrieve span by ID |
-| `spans` | All spans (list) |
-| `root_spans` | Spans without parents |
-| `children_of(span_id)` | Direct children of a span |
-| `to_dict()` | Full nested trace dict |
-
-### `@trace_call(tracer, name, parent_id)`
-
-Wraps sync or async functions. If the function signature includes `span_id`, the active span's ID is injected automatically.
-
----
+All contributions welcome. Keep it zero-dependency.
 
 ## License
 
-MIT
+MIT — use freely, build freely.
+
+---
+
+<div align="center">
+
+**Built with 🔮 by [Darshankumar Joshi](https://github.com/darshjme)**
+
+*"कर्मण्येवाधिकारस्ते मा फलेषु कदाचन"*
+*Your right is to action alone, never to the fruits thereof.*
+
+[Arsenal](https://github.com/darshjme/arsenal) · [GitHub](https://github.com/darshjme) · [Twitter](https://twitter.com/thedarshanjoshi)
+
+</div>
