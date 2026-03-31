@@ -13,7 +13,7 @@ pip install -e ".[dev]"
 ## Running Tests
 
 ```bash
-python -m pytest tests/ -v
+PYTHONPATH=src python -m pytest tests/ -v
 ```
 
 ## Guidelines
@@ -28,7 +28,7 @@ python -m pytest tests/ -v
 
 1. Fork the repo and create a feature branch.
 2. Write tests for your change.
-3. Ensure all tests pass: `python -m pytest tests/ -v`.
+3. Ensure all tests pass: `PYTHONPATH=src python -m pytest tests/ -v`.
 4. Submit a PR with a clear description of the change.
 
 ## Code of Conduct
